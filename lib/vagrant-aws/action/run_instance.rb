@@ -10,11 +10,27 @@ module VagrantPlugins
     module Action
       # This runs the configured instance.
       class RunInstance
+        @@instances = 0
+        LIMIT = 10
+        
+        def self.update_instances
+          @@instances = @@instances + 1
+        end
+
+        def self.instances
+          @@instances
+        end
+
         include Vagrant::Util::Retryable
 
         def initialize(app, env)
+          RunInstance.update_instances
           @app    = app
+          @instance_no = RunInstance.instances
+          @iteration = 1
           @logger = Log4r::Logger.new("vagrant_aws::action::run_instance")
+          @logger.info("---------------------- No of instances - #{RunInstance.instances}---------------")
+          control_vm_creation
         end
 
         def call(env)
@@ -281,7 +297,13 @@ module VagrantPlugins
           end
         end
 
-
+        def control_vm_creation
+          while @instance_no > (LIMIT * @iteration) do
+            @iteration = @iteration + 1
+            @logger.info("----------------instance_no - #{@instance_no} will wait-----------------")
+            sleep 30
+          end
+        end
       end
     end
   end
